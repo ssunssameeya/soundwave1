@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>파동으로 알아보는 소리의 특성 시뮬레이터</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts (Noto Sans KR for Clean Look) -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght=300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: #f0f4f8;
+    }
+    /* SVG & Animations for Trumpet/Piano Boy */
+    @keyframes vibrate {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      20% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+      40% { transform: translate(1px, -1px) rotate(0.5deg); }
+      60% { transform: translate(-1px, -1px) rotate(0deg); }
+      80% { transform: translate(1px, 1px) rotate(0.5deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
+    }
+    .playing-animation {
+      animation: vibrate 0.2s infinite;
+    }
+    /* Styled Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #e2e8f0;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-800">
+
+  <!-- Header -->
+  <header class="bg-indigo-600 text-white shadow-md py-4 px-6">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-white text-indigo-600 p-2.5 rounded-lg shadow-inner">
+          <i class="fa-solid fa-wave-square text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl md:text-2xl font-bold tracking-tight">파동으로 알아보는 소리의 특성 시뮬레이터</h1>
+          <p class="text-xs text-indigo-200 mt-0.5">성취기준 [9과10-04] 파동의 발생과 전달 및 소리의 3요소 탐구</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="switchTab('simulation')" id="btn-tab-sim" class="px-4 py-2 rounded-full font-semibold text-sm transition-all duration-200 bg-white text-indigo-700 shadow-md">
+          <i class="fa-solid fa-sliders mr-1.5"></i>시뮬레이터 탐구
+        </button>
+        <button onclick="switchTab('quiz')" id="btn-tab-quiz" class="px-4 py-2 rounded-full font-semibold text-sm transition-all duration-200 bg-indigo-500 hover:bg-indigo-400 text-white">
+          <i class="fa-solid fa-graduation-cap mr-1.5"></i>결론 도출하기 (퀴즈)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-6">
+    
+    <!-- TAB 1: Simulation Screen -->
+    <div id="tab-simulation" class="space-y-6">
+      
+      <!-- Top Guide -->
+      <div class="bg-white border-l-4 border-indigo-500 rounded-r-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-start gap-3">
+          <span class="text-indigo-500 text-xl mt-0.5"><i class="fa-solid fa-circle-info"></i></span>
+          <div>
+            <h2 class="font-bold text-slate-900">귀로 듣고 눈으로 보며 탐구하기</h2>
+            <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+              조절판의 <strong class="text-indigo-600">+, - 버튼</strong>을 눌러 진폭과 진동수를 바꾸어 보세요. 어떤 소리가 나고 파동 모양이 어떻게 변하는지 관찰한 후 여러분의 탐구 활동지에 직접 기록해 봅시다!
+            </p>
+          </div>
+        </div>
+        <!-- Audio Control Button -->
+        <div class="flex items-center gap-2 self-end sm:self-auto">
+          <button id="btn-audio-toggle" onclick="toggleAudio()" class="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-md font-bold text-sm flex items-center gap-2 transition-all active:scale-95">
+            <i id="audio-icon" class="fa-solid fa-volume-high"></i>
+            <span id="audio-text">소리 켜기</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Play Ground (Grid Layout) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left: Interactive Visualizer (8 cols) -->
+        <div class="lg:col-span-8 bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden flex flex-col">
+          
+          <!-- State Display Bar -->
+          <div class="bg-slate-50 border-b border-slate-100 px-6 py-3.5 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <span id="badge-instrument" class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs">
+                <i class="fa-solid fa-music mr-1"></i>악기: 트럼펫
+              </span>
+              <span id="badge-medium" class="bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs">
+                <i class="fa-solid fa-wind mr-1"></i>매질: 공기
+              </span>
+            </div>
+            <div class="flex items-center gap-3 text-xs text-slate-500">
+              <span>진폭 상태: <strong id="val-display-amp" class="text-indigo-600 text-sm">보통</strong></span>
+              <span>진동수 상태: <strong id="val-display-freq" class="text-indigo-600 text-sm">보통</strong></span>
+            </div>
+          </div>
+
+          <!-- Sandbox Area (Meme + Waveform Canvas) -->
+          <div id="sandbox-container" class="relative flex-grow p-6 flex flex-col md:flex-row items-center justify-center gap-6 min-h-[380px] transition-colors duration-500 bg-sky-50/20">
+            
+            <!-- Trumpet Boy Canvas/Graphics -->
+            <div class="relative w-full md:w-2/5 flex flex-col items-center justify-center">
+              
+              <!-- Character Display Block -->
+              <div id="character-wrapper" class="relative playing-animation w-60 h-60 bg-white/80 rounded-2xl border border-slate-100 p-4 shadow-sm flex flex-col justify-between items-center overflow-hidden transition-all duration-300">
+                
+                <!-- Graphic Display -->
+                <div class="relative w-full flex-grow flex items-center justify-center">
+                  <div id="meme-illustration" class="relative w-full h-full flex items-center justify-center">
+                    
+                    <!-- Girl with hands on ears (Left side of container) -->
+                    <div id="girl-figure" class="absolute left-4 bottom-2 flex flex-col items-center transition-all duration-300">
+                      <div class="text-5xl select-none filter drop-shadow">🙉</div>
+                      <div class="bg-red-50 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded border border-red-200 mt-1 shadow-sm whitespace-nowrap animate-bounce">
+                        귀를 막자!
+                      </div>
+                      <div class="text-[10px] text-slate-500 mt-0.5 font-medium">관객(여학생)</div>
+                    </div>
+
+                    <!-- Musician Figure (Right side of container) -->
+                    <div id="boy-figure" class="absolute right-4 bottom-2 flex flex-col items-center transition-all duration-300">
+                      <div id="boy-instrument-emoji" class="text-6xl select-none filter drop-shadow transform -scale-x-100">🎺👦</div>
+                      <div id="speed-indicator" class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 mt-1 shadow-sm whitespace-nowrap">
+                        뿌우우-!
+                      </div>
+                      <div id="boy-label" class="text-[10px] text-slate-500 mt-0.5 font-medium">트럼펫 소년</div>
+                    </div>
+
+                    <!-- Water Effect Overlay -->
+                    <div id="water-overlay" class="absolute inset-0 bg-sky-400/30 backdrop-blur-[1px] opacity-0 pointer-events-none rounded-lg flex items-center justify-center transition-all duration-500">
+                      <div class="text-blue-950 font-bold bg-white/80 px-3 py-1 rounded-full text-xs shadow border border-sky-300">
+                        🌊 물 속에서 연주 중
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="w-full text-center text-xs text-slate-400 mt-2 font-mono">
+                  TRUMPET BOY MEME SIM
+                </div>
+              </div>
+
+              <!-- Live Sound Indicator Sparkles -->
+              <div id="sparkle-container" class="absolute top-1/3 right-4 pointer-events-none flex flex-col gap-1">
+                <span class="text-indigo-500 text-sm opacity-75 animate-ping"><i class="fa-solid fa-music"></i></span>
+              </div>
+            </div>
+
+            <!-- Wave Graph Area -->
+            <div class="w-full md:w-3/5 flex flex-col items-stretch">
+              <div class="flex justify-between items-center mb-2 px-1">
+                <span class="text-xs font-bold text-slate-500 flex items-center gap-1">
+                  <i class="fa-solid fa-wave-square text-indigo-500"></i> 오실로스코프 (실시간 파형)
+                </span>
+                <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded">진행 방향 &rarr;</span>
+              </div>
+              
+              <!-- Wave Canvas Wrap -->
+              <div class="relative bg-slate-900 rounded-xl overflow-hidden shadow-inner border-2 border-slate-800 p-1">
+                <!-- Grid Lines Background -->
+                <div class="absolute inset-0 grid grid-cols-6 grid-rows-4 pointer-events-none opacity-20">
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-r border-teal-500"></div>
+                  <div class="border-b border-teal-500"></div>
+                  <div class="border-r border-teal-500"></div>
+                  <div class="border-r border-teal-500"></div>
+                  <div class="border-r border-teal-500"></div>
+                  <div class="border-r border-teal-500"></div>
+                  <div class="border-r border-teal-500"></div>
+                  <div></div>
+                </div>
+                
+                <canvas id="waveCanvas" class="w-full block h-56 relative z-10"></canvas>
+                
+                <!-- Zero Line Indicator -->
+                <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-rose-500/40 pointer-events-none z-0"></div>
+                
+                <!-- Real-time Amplitude indicator bars -->
+                <div class="absolute left-2 top-2 bottom-2 w-1 flex flex-col justify-between text-[8px] font-mono text-teal-400 select-none z-20">
+                  <span>+기준선</span>
+                  <span>0</span>
+                  <span>-기준선</span>
+                </div>
+              </div>
+
+              <!-- Wave parameters info box inside graph -->
+              <div class="grid grid-cols-2 gap-2 mt-3">
+                <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-2.5 text-center text-xs">
+                  <div class="text-slate-500 font-bold">진폭 (Amplitude)</div>
+                  <div class="font-bold text-indigo-700 mt-1 text-sm" id="info-amp-text">상태: 보통</div>
+                </div>
+                <div class="bg-sky-50 border border-sky-100 rounded-lg p-2.5 text-center text-xs">
+                  <div class="text-slate-500 font-bold">진동수 (Frequency)</div>
+                  <div class="font-bold text-sky-700 mt-1 text-sm" id="info-freq-text">음높이: 보통</div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Bottom Controller Explanation -->
+          <div class="bg-slate-50 border-t border-slate-100 px-6 py-3.5 text-xs text-slate-500 flex flex-col sm:flex-row justify-between gap-1.5">
+            <span class="flex items-center gap-1"><i class="fa-solid fa-circle-question text-indigo-500"></i> 소리와 파동을 보며 직접 결론을 찾아 활동지에 적어보세요.</span>
+            <span class="flex items-center gap-1"><i class="fa-solid fa-volume-high text-rose-500"></i> 소리를 켜서 변화를 직접 귀로 확인해보세요!</span>
+          </div>
+
+        </div>
+
+        <!-- Right: Control Panel (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+          
+          <!-- Control Section 1: Wave Parameters (Amplitude & Frequency) -->
+          <div class="bg-white rounded-2xl p-5 shadow-md border border-slate-100 space-y-5">
+            <h3 class="font-bold text-slate-950 text-base border-b pb-2 flex items-center gap-2">
+              <i class="fa-solid fa-sliders text-indigo-500"></i> 파동 세부 속성 조절
+            </h3>
+
+            <!-- Amplitude Contol Box -->
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                  <i class="fa-solid fa-up-down text-indigo-500"></i> 진폭 조절
+                </span>
+                <span id="amp-status-badge" class="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded font-bold">보통</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="adjustAmplitude('decrease')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-2.5 px-3 rounded-lg border border-slate-200 transition-colors active:scale-95 text-lg select-none">
+                  <i class="fa-solid fa-minus text-sm mr-1"></i> - 작게
+                </button>
+                <button onclick="adjustAmplitude('increase')" class="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black py-2.5 px-3 rounded-lg border border-indigo-200 transition-colors active:scale-95 text-lg select-none">
+                  + 크게 <i class="fa-solid fa-plus text-sm ml-1"></i>
+                </button>
+              </div>
+            </div>
+
+            <hr class="border-slate-100">
+
+            <!-- Frequency Control Box -->
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                  <i class="fa-solid fa-arrows-left-right text-indigo-500"></i> 진동수 조절
+                </span>
+                <span id="freq-status-badge" class="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded font-bold">보통</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="adjustFrequency('decrease')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-2.5 px-3 rounded-lg border border-slate-200 transition-colors active:scale-95 text-lg select-none">
+                  <i class="fa-solid fa-minus text-sm mr-1"></i> - 낮게
+                </button>
+                <button onclick="adjustFrequency('increase')" class="flex-1 bg-sky-50 hover:bg-sky-100 text-sky-700 font-black py-2.5 px-3 rounded-lg border border-sky-200 transition-colors active:scale-95 text-lg select-none">
+                  + 높게 <i class="fa-solid fa-plus text-sm ml-1"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Control Section 2: Environment Options (Water, Instrument) -->
+          <div class="bg-white rounded-2xl p-5 shadow-md border border-slate-100 space-y-4">
+            <h3 class="font-bold text-slate-950 text-base border-b pb-2 flex items-center gap-2">
+              <i class="fa-solid fa-circle-nodes text-indigo-500"></i> 환경 조건 바꾸기
+            </h3>
+
+            <!-- Water Mode Toggle Button -->
+            <button id="btn-water" onclick="toggleWaterMode()" class="w-full bg-slate-50 hover:bg-sky-50 border-2 border-slate-200 hover:border-sky-300 text-slate-700 hover:text-sky-800 p-3.5 rounded-xl transition-all duration-200 flex items-center justify-between group active:scale-95">
+              <div class="flex items-center gap-3">
+                <div class="bg-white group-hover:bg-sky-100 p-2.5 rounded-lg border border-slate-100 text-slate-400 group-hover:text-sky-600 transition-colors">
+                  <i class="fa-solid fa-droplet text-xl"></i>
+                </div>
+                <div class="text-left">
+                  <div class="font-bold text-sm">물 속에서 연주하기</div>
+                  <div class="text-[11px] text-slate-500 mt-0.5">매질의 밀도를 다르게 바꿉니다.</div>
+                </div>
+              </div>
+              <div id="water-status-dot" class="w-3 h-3 rounded-full bg-slate-300 transition-colors"></div>
+            </button>
+
+            <!-- Piano Mode Toggle Button -->
+            <button id="btn-piano" onclick="togglePianoMode()" class="w-full bg-slate-50 hover:bg-amber-50 border-2 border-slate-200 hover:border-amber-300 text-slate-700 hover:text-amber-800 p-3.5 rounded-xl transition-all duration-200 flex items-center justify-between group active:scale-95">
+              <div class="flex items-center gap-3">
+                <div class="bg-white group-hover:bg-amber-100 p-2.5 rounded-lg border border-slate-100 text-slate-400 group-hover:text-amber-600 transition-colors">
+                  <i class="fa-solid fa-keyboard text-xl"></i>
+                </div>
+                <div class="text-left">
+                  <div class="font-bold text-sm">피아노로 연주하기</div>
+                  <div class="text-[11px] text-slate-500 mt-0.5">연주하는 악기의 종류를 변경합니다.</div>
+                </div>
+              </div>
+              <div id="piano-status-dot" class="w-3 h-3 rounded-full bg-slate-300 transition-colors"></div>
+            </button>
+
+            <!-- Reset Button -->
+            <button onclick="resetSimulator()" class="w-full mt-2 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-semibold py-2 px-3 rounded-lg border border-dashed border-rose-200 hover:border-rose-300 transition-all text-center">
+              <i class="fa-solid fa-rotate-left mr-1"></i> 시뮬레이터 초기화하기
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- TAB 2: Quiz & Conclusion Screen -->
+    <div id="tab-quiz" class="hidden space-y-6">
+      
+      <!-- Quiz Guide -->
+      <div class="bg-indigo-50 border-l-4 border-indigo-600 rounded-r-xl p-4 shadow-sm flex items-start gap-3">
+        <span class="text-indigo-600 text-xl mt-0.5"><i class="fa-solid fa-brain"></i></span>
+        <div>
+          <h2 class="font-bold text-slate-900">도출할 수 있는 탐구 결론은 무엇일까요?</h2>
+          <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+            시뮬레이터에서 실험하고 관찰한 소리의 변화를 바탕으로 알맞은 개념끼리 선으로 연결해보세요. 정답을 맞추면 멋진 마술사 인증서가 주어집니다!
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Interactive Quiz Board -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Connection Quiz (8 cols) -->
+        <div class="lg:col-span-8 bg-white rounded-2xl shadow-md border border-slate-100 p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center border-b pb-3 mb-6">
+              <h3 class="font-bold text-slate-950 text-base flex items-center gap-2">
+                <i class="fa-solid fa-grip-lines text-indigo-500"></i> 소리의 특성 선 연결하기 퀴즈
+              </h3>
+              <button onclick="resetQuiz()" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-rotate-right"></i> 다시 연결하기
+              </button>
+            </div>
+
+            <!-- Drag & Match Interactive Canvas Area -->
+            <div class="relative min-h-[320px] bg-slate-50 rounded-xl p-4 md:p-6 overflow-hidden">
+              <!-- SVG Overlay for drawing connections -->
+              <svg id="quiz-svg" class="absolute inset-0 w-full h-full pointer-events-none z-10">
+                <defs>
+                  <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1"/>
+                  </marker>
+                </defs>
+              </svg>
+
+              <!-- Two Column Layout (Left: Concept / Right: Parameter) -->
+              <div class="relative z-20 grid grid-cols-2 gap-10 md:gap-24 h-full">
+                
+                <!-- Left Column (Sounds Characteristics) -->
+                <div class="flex flex-col justify-around gap-6 py-4">
+                  <div class="text-xs font-bold text-slate-400 tracking-wider">소리의 특성 (현상)</div>
+                  
+                  <div id="node-sound-loudness" data-match="amp" onclick="selectNode('left', 'node-sound-loudness')" class="quiz-node-left bg-white border-2 border-slate-200 hover:border-indigo-400 px-4 py-3.5 rounded-xl shadow-sm cursor-pointer transition-all flex items-center justify-between group">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xl text-rose-500"><i class="fa-solid fa-volume-high"></i></span>
+                      <span class="text-sm font-bold text-slate-800">소리의 크기</span>
+                    </div>
+                    <span class="w-5 h-5 rounded-full border-2 border-slate-300 group-hover:bg-indigo-50 flex items-center justify-center text-xs text-white bg-white">&bull;</span>
+                  </div>
+
+                  <div id="node-sound-pitch" data-match="freq" onclick="selectNode('left', 'node-sound-pitch')" class="quiz-node-left bg-white border-2 border-slate-200 hover:border-indigo-400 px-4 py-3.5 rounded-xl shadow-sm cursor-pointer transition-all flex items-center justify-between group">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xl text-emerald-500"><i class="fa-solid fa-music"></i></span>
+                      <span class="text-sm font-bold text-slate-800">소리의 높낮이</span>
+                    </div>
+                    <span class="w-5 h-5 rounded-full border-2 border-slate-300 group-hover:bg-indigo-50 flex items-center justify-center text-xs text-white bg-white">&bull;</span>
+                  </div>
+
+                  <div id="node-sound-timbre" data-match="shape" onclick="selectNode('left', 'node-sound-timbre')" class="quiz-node-left bg-white border-2 border-slate-200 hover:border-indigo-400 px-4 py-3.5 rounded-xl shadow-sm cursor-pointer transition-all flex items-center justify-between group">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xl text-amber-500"><i class="fa-solid fa-guitar"></i></span>
+                      <span class="text-sm font-bold text-slate-800">소리의 맵시 (음색)</span>
+                    </div>
+                    <span class="w-5 h-5 rounded-full border-2 border-slate-300 group-hover:bg-indigo-50 flex items-center justify-center text-xs text-white bg-white">&bull;</span>
+                  </div>
+                </div>
+
+                <!-- Right Column (Wave Parameters) -->
+                <div class="flex flex-col justify-around gap-6 py-4">
+                  <div class="text-xs font-bold text-slate-400 tracking-wider text-right">파동의 요소 (원인)</div>
+
+                  <div id="node-wave-freq" data-id="freq" onclick="selectNode('right', 'node-wave-freq')" class="quiz-node-right bg-white border-2 border-slate-200 hover:border-indigo-400 px-4 py-3.5 rounded-xl shadow-sm cursor-pointer transition-all flex items-center justify-between group">
+                    <span class="w-5 h-5 rounded-full border-2 border-slate-300 group-hover:bg-indigo-50 flex items-center justify-center text-xs text-white bg-white">&bull;</span>
+                    <div class="flex items-center gap-2 text-right">
+                      <span class="text-sm font-bold text-slate-800">파동의 진동수</span>
+                      <span class="text-xl text-emerald-500"><i class="fa-solid fa-arrows-left-right"></i></span>
+                    </div>
+                  </div>
+
+                  <div id="node-wave-shape" data-id="shape" onclick="selectNode('right', 'node-wave-shape')" class="quiz-node-right bg-white border-2 border-slate-200 hover:border-indigo-400 px-4 py-3.5 rounded-xl shadow-sm cursor-pointer transition-all flex items-center justify-between group">
+                    <span class="w-5 h-5 rounded-full border-2 border-slate-300 group-hover:bg-indigo-50 flex items-center justify-center text-xs text-white bg-white">&bull;</span>
+                    <div class="flex items-center gap-2 text-right">
+                      <span class="text-sm font-bold text-slate-800">파동의 모양 (파형)</span>
+                      <span class="text-xl text-amber-500"><i class="fa-solid fa-chart-line"></i></span>
+                    </div>
+                  </div>
+
+                  <div id="node-wave-amp" data-id="amp" onclick="selectNode('right', 'node-wave-amp')" class="quiz-node-right bg-white border-2 border-slate-200 hover:border-indigo-400 px-4 py-3.5 rounded-xl shadow-sm cursor-pointer transition-all flex items-center justify-between group">
+                    <span class="w-5 h-5 rounded-full border-2 border-slate-300 group-hover:bg-indigo-50 flex items-center justify-center text-xs text-white bg-white">&bull;</span>
+                    <div class="flex items-center gap-2 text-right">
+                      <span class="text-sm font-bold text-slate-800">파동의 진폭</span>
+                      <span class="text-xl text-rose-500"><i class="fa-solid fa-up-down"></i></span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Line drawing status msg / guidance inside quiz -->
+              <div class="absolute bottom-2 left-0 right-0 text-center pointer-events-none">
+                <span id="quiz-guide-text" class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-3 py-1 rounded-full shadow-sm animate-pulse">
+                  왼쪽의 '소리의 특성' 항목 중 하나를 클릭한 후, 이에 매칭되는 우측의 '파동 요소'를 차례로 눌러 선을 완성하세요!
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom check/submission buttons -->
+          <div class="mt-6 flex justify-between items-center">
+            <span class="text-xs text-slate-500">
+              틀려도 언제든 '다시 연결하기'를 눌러 리셋할 수 있습니다.
+            </span>
+            <button onclick="checkAnswers()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2">
+              <i class="fa-solid fa-circle-check"></i> 정답 확인하고 제출하기
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Side: Certificate & Achievements Frame (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+          
+          <!-- Student Certificate Panel (Locked initially, reveals on quiz completion) -->
+          <div id="panel-certificate" class="relative bg-white rounded-2xl p-6 shadow-md border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-center min-h-[380px] overflow-hidden transition-all duration-500">
+            
+            <!-- Locked State Screen -->
+            <div id="cert-locked-state" class="space-y-4 flex flex-col items-center">
+              <div class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-3xl shadow-inner border border-slate-200">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-slate-800 text-base">마술사 인증서 발급 대기 중</h4>
+                <p class="text-xs text-slate-500 mt-2 max-w-[240px] leading-relaxed mx-auto">
+                  좌측의 파동 연결 퀴즈를 <strong class="text-indigo-600">모두 올바르게 완료</strong>하여 잠금을 해제하고 당신만의 가상 음악 인증서를 받아 가세요!
+                </p>
+              </div>
+            </div>
+
+            <!-- Unlocked State Screen (Hidden initially) -->
+            <div id="cert-unlocked-state" class="hidden w-full h-full flex flex-col justify-between items-center space-y-4">
+              <!-- Shiny Ribbon Ribbon decoration -->
+              <div class="absolute top-0 right-0 w-20 h-20 overflow-hidden pointer-events-none">
+                <div class="bg-amber-400 text-amber-950 font-bold text-[9px] py-1 text-center rotate-45 absolute w-[120px] top-[24px] right-[-32px] shadow-sm tracking-wider uppercase">
+                  EXCELLENT
+                </div>
+              </div>
+
+              <!-- Certificate Emblem -->
+              <div class="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-300 text-amber-600 flex items-center justify-center text-3xl shadow-md animate-bounce">
+                <i class="fa-solid fa-award"></i>
+              </div>
+
+              <div class="space-y-2">
+                <h3 class="text-lg font-black text-slate-900 tracking-tight">축하합니다!</h3>
+                <h4 class="text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full inline-block">
+                  당신은 음악의 마술사입니다!
+                </h4>
+              </div>
+
+              <!-- Formal Certificate Core Frame -->
+              <div class="border-2 border-amber-200 bg-amber-50/20 p-4 rounded-xl w-full text-left space-y-2 relative">
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  위 학생은 파동 시뮬레이터를 완벽히 탐구하여 소리의 특성(<strong class="text-rose-600">진폭</strong>, <strong class="text-emerald-600">진동수</strong>, <strong class="text-amber-600">파형</strong>)의 관계를 물리적으로 훌륭하게 탐구해 냈습니다. 이에 '음악의 마술사 인증서'를 수여합니다.
+                </p>
+                <div class="flex justify-between items-end pt-2 text-[10px] text-slate-500 font-mono">
+                  <span>인증기관: 소리 파동 연구소</span>
+                  <span>발급 일시: 2026. 06. 08</span>
+                </div>
+              </div>
+
+              <!-- Share action or download visual response -->
+              <button onclick="window.print()" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-print"></i> 인증서 인쇄/PDF 저장하기
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center border-t border-slate-800 text-xs">
+    <div class="max-w-6xl mx-auto px-4 space-y-2">
+      <p>&copy; 2026 파동으로 알아보는 소리의 특성 시뮬레이터. All Rights Reserved.</p>
+      <p class="text-[10px] text-slate-600">이 시뮬레이터는 중학교 과학 파동 단원의 탐구 기반 자기주도형 학습을 위해 제작되었습니다.</p>
+    </div>
+  </footer>
+
+  <!-- Notification Toast Popup Box -->
+  <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 transform translate-y-[-100px] opacity-0">
+    <div id="toast-message" class="bg-slate-900 text-white font-bold py-3.5 px-6 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-3">
+      <span id="toast-icon" class="text-lg text-emerald-400"><i class="fa-solid fa-circle-check"></i></span>
+      <span id="toast-text" class="text-sm">메시지 내용</span>
+    </div>
+  </div>
+
+  <!-- JavaScript Logics -->
+  <script>
+    // --- Application Configurations & States ---
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'sound-wave-simulator';
+    
+    let state = {
+      amplitude: 2,  // 1 (작게), 2 (보통), 3 (크게)
+      frequency: 2,  // 1 (낮게), 2 (보통), 3 (높게)
+      isWaterMode: false,
+      isPianoMode: false
+    };
+
+    // UI Mappings for Amplitude states
+    const ampMeta = {
+      1: { text: "작게", label: "직접 관찰해 보세요", gain: 0.15, value: 15 },
+      2: { text: "보통", label: "직접 관찰해 보세요", gain: 0.5, value: 35 },
+      3: { text: "크게", label: "직접 관찰해 보세요", gain: 1.0, value: 70 }
+    };
+
+    // UI Mappings for Frequency states (No C, E, A clues!)
+    const freqMeta = {
+      1: { text: "낮게", label: "직접 관찰해 보세요", pitch: 261.63, rate: 0.8, value: 0.018 },
+      2: { text: "보통", label: "직접 관찰해 보세요", pitch: 329.63, rate: 1.0, value: 0.030 },
+      3: { text: "높게", label: "직접 관찰해 보세요", pitch: 440.00, rate: 1.4, value: 0.055 }
+    };
+
+    // --- Web Audio API Synth Settings ---
+    let audioCtx = null;
+    let mainOscillator = null;
+    let subOscillator = null; // Sub-harmonics for piano
+    let gainNode = null;
+    let subGainNode = null;
+    let filterNode = null;
+    let isAudioPlaying = false;
+    let pianoTickerId = null; // Loop for repeating key strikes in piano mode
+
+    // Initialize/Start Audio Engine
+    function initAudio() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        
+        mainOscillator = audioCtx.createOscillator();
+        subOscillator = audioCtx.createOscillator();
+        
+        gainNode = audioCtx.createGain();
+        subGainNode = audioCtx.createGain();
+        filterNode = audioCtx.createBiquadFilter();
+
+        // Connect Main Tone
+        mainOscillator.connect(filterNode);
+        // Connect Piano Subharmonic Tone
+        subOscillator.connect(subGainNode);
+        subGainNode.connect(filterNode);
+
+        filterNode.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        // Configure default waves
+        mainOscillator.start();
+        subOscillator.start();
+        
+        isAudioPlaying = true;
+        updateAudioSynth();
+      } catch (e) {
+        console.error("Web Audio API is not supported in this browser", e);
+      }
+    }
+
+    // Trigger a single sharp piano key strike envelope
+    function triggerPianoStrike() {
+      if (!audioCtx || !isAudioPlaying || !state.isPianoMode) return;
+
+      const now = audioCtx.currentTime;
+      const currentFreq = freqMeta[state.frequency].pitch;
+      const currentGain = ampMeta[state.amplitude].gain;
+
+      // Reset and trigger percussive ADSR envelope
+      // Clear scheduling to avoid overlapping bugs
+      gainNode.gain.cancelScheduledValues(now);
+      subGainNode.gain.cancelScheduledValues(now);
+
+      // Fast percussive attack (0.01s), then exponential decay to silence (1.4s)
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(currentGain * 0.6, now + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+
+      // Add subharmonic chime (Double frequency for beautiful resonance)
+      subGainNode.gain.setValueAtTime(0, now);
+      subGainNode.gain.linearRampToValueAtTime(currentGain * 0.25, now + 0.02);
+      subGainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    }
+
+    // Live update Synth parameters on control state changes
+    function updateAudioSynth() {
+      if (!audioCtx || !isAudioPlaying) return;
+
+      const now = audioCtx.currentTime;
+      const currentFreq = freqMeta[state.frequency].pitch;
+      const currentGain = ampMeta[state.amplitude].gain;
+
+      // Clear any auto-play loops if they exist
+      if (pianoTickerId) {
+        clearInterval(pianoTickerId);
+        pianoTickerId = null;
+      }
+
+      // Configure filter for medium effect
+      if (state.isWaterMode) {
+        filterNode.type = 'lowpass';
+        filterNode.frequency.setTargetAtTime(320, now, 0.1); // Muffles high-end frequencies
+      } else {
+        filterNode.type = 'allpass'; // Clear pristine air medium sound
+      }
+
+      if (state.isPianoMode) {
+        // --- REAL PIANO TIMBRE ---
+        mainOscillator.type = 'triangle'; // Soft woody/metallic strike fundamental
+        subOscillator.type = 'sine';      // Pure tone overtone
+        
+        mainOscillator.frequency.setValueAtTime(currentFreq, now);
+        subOscillator.frequency.setValueAtTime(currentFreq * 2, now); // Octave higher harmonic
+        
+        // Trigger immediate strike on parameter change
+        triggerPianoStrike();
+
+        // Set up interval to strike the piano key automatically every 1.5 seconds like a pattern
+        pianoTickerId = setInterval(() => {
+          triggerPianoStrike();
+        }, 1500);
+
+      } else {
+        // --- STANDARD TRUMPET TIMBRE ---
+        // Trumpet plays a continuous bright tone (sawtooth)
+        mainOscillator.type = 'sawtooth';
+        subOscillator.type = 'sine';
+        
+        mainOscillator.frequency.setTargetAtTime(currentFreq, now, 0.05);
+        
+        // Quiet the subharmonic
+        subGainNode.gain.setTargetAtTime(0, now, 0.05);
+
+        // Constant continuous gain (no decay)
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setTargetAtTime(currentGain * 0.12, now, 0.05); // Sawtooth is naturally louder
+      }
+    }
+
+    // Toggle Audio System Global State
+    function toggleAudio() {
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      const btn = document.getElementById('btn-audio-toggle');
+      const icon = document.getElementById('audio-icon');
+      const text = document.getElementById('audio-text');
+
+      if (!isAudioPlaying) {
+        if (!audioCtx) {
+          initAudio();
+        } else {
+          try {
+            mainOscillator = audioCtx.createOscillator();
+            subOscillator = audioCtx.createOscillator();
+            gainNode = audioCtx.createGain();
+            subGainNode = audioCtx.createGain();
+            filterNode = audioCtx.createBiquadFilter();
+
+            mainOscillator.connect(filterNode);
+            subOscillator.connect(subGainNode);
+            subGainNode.connect(filterNode);
+            filterNode.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            mainOscillator.start();
+            subOscillator.start();
+            isAudioPlaying = true;
+            updateAudioSynth();
+          } catch(err) {
+            initAudio();
+          }
+        }
+        btn.className = "px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md font-bold text-sm flex items-center gap-2 transition-all active:scale-95 animate-pulse";
+        icon.className = "fa-solid fa-volume-high animate-bounce";
+        text.innerText = "소리 끄기";
+        showToast("소리 재생을 시작합니다. 귀로 소리 특징의 변화를 느껴보세요!");
+      } else {
+        // Silence the synthesizer
+        if (mainOscillator) {
+          try { mainOscillator.stop(); } catch(e) {}
+        }
+        if (subOscillator) {
+          try { subOscillator.stop(); } catch(e) {}
+        }
+        if (pianoTickerId) {
+          clearInterval(pianoTickerId);
+          pianoTickerId = null;
+        }
+        isAudioPlaying = false;
+        btn.className = "px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-md font-bold text-sm flex items-center gap-2 transition-all active:scale-95";
+        icon.className = "fa-solid fa-volume-xmark";
+        text.innerText = "소리 켜기";
+        showToast("소리를 음소거했습니다.");
+      }
+    }
+
+    // --- Interactive Quiz States ---
+    let quizState = {
+      selectedLeft: null,
+      selectedRight: null,
+      connections: {} 
+    };
+
+    const correctAnswers = {
+      "node-sound-loudness": "node-wave-amp", 
+      "node-sound-pitch": "node-wave-freq",   
+      "node-sound-timbre": "node-wave-shape"  
+    };
+
+    // --- Canvas Visualizer Configuration & Setup ---
+    const canvas = document.getElementById('waveCanvas');
+    const ctx = canvas.getContext('2d');
+    let animationId = null;
+    let phase = 0;
+
+    // Responsive Canvas resizing
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    // --- Canvas Wave drawing core engine ---
+    function drawWave() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const ampVal = ampMeta[state.amplitude].value;
+      const freqVal = freqMeta[state.frequency].value;
+      const centerY = canvas.height / 2;
+
+      // Draw horizontal axis center-line
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(20, 184, 166, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(canvas.width, centerY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.lineWidth = state.isWaterMode ? 4 : 3;
+
+      if (state.isWaterMode) {
+        ctx.strokeStyle = '#38bdf8'; 
+      } else if (state.isPianoMode) {
+        ctx.strokeStyle = '#f59e0b'; 
+      } else {
+        ctx.strokeStyle = '#818cf8'; 
+      }
+
+      // Draw the wave mathematically
+      for (let x = 0; x < canvas.width; x++) {
+        let y = centerY;
+
+        let waveScale = state.isWaterMode ? 0.6 : 1.0; 
+        let activeAmp = ampVal * waveScale;
+        let activeFreq = freqVal * (state.isWaterMode ? 0.6 : 1.0); 
+
+        if (state.isPianoMode) {
+          // Sharp piano style wave representation
+          let fundamental = Math.sin(x * activeFreq + phase);
+          let secondHarmonic = 0.45 * Math.sin(x * (activeFreq * 2) + phase * 1.5);
+          let thirdHarmonic = 0.2 * Math.sin(x * (activeFreq * 3) + phase * 2);
+          y += (fundamental + secondHarmonic + thirdHarmonic) * activeAmp * 0.7;
+        } else {
+          // Standard Sine Waveform representing trumpet wind tone
+          y += Math.sin(x * activeFreq + phase) * activeAmp;
+        }
+
+        if (x === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+
+      ctx.stroke();
+
+      if (state.isWaterMode) {
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 10;
+      } else {
+        ctx.shadowBlur = 0;
+      }
+
+      let movementSpeed = state.isWaterMode ? 0.03 : 0.07;
+      phase -= movementSpeed * freqMeta[state.frequency].rate;
+
+      animationId = requestAnimationFrame(drawWave);
+    }
+
+    // --- Tab Switcher Logic ---
+    function switchTab(tabName) {
+      const tabSim = document.getElementById('tab-simulation');
+      const tabQuiz = document.getElementById('tab-quiz');
+      const btnSim = document.getElementById('btn-tab-sim');
+      const btnQuiz = document.getElementById('btn-tab-quiz');
+
+      if (tabName === 'simulation') {
+        tabSim.classList.remove('hidden');
+        tabQuiz.classList.add('hidden');
+        
+        btnSim.classList.add('bg-white', 'text-indigo-700', 'shadow-md');
+        btnSim.classList.remove('bg-indigo-500', 'hover:bg-indigo-400', 'text-white');
+
+        btnQuiz.classList.add('bg-indigo-500', 'hover:bg-indigo-400', 'text-white');
+        btnQuiz.classList.remove('bg-white', 'text-indigo-700', 'shadow-md');
+        
+        if (!animationId) drawWave();
+      } else {
+        tabSim.classList.add('hidden');
+        tabQuiz.classList.remove('hidden');
+
+        btnQuiz.classList.add('bg-white', 'text-indigo-700', 'shadow-md');
+        btnQuiz.classList.remove('bg-indigo-500', 'hover:bg-indigo-400', 'text-white');
+
+        btnSim.classList.add('bg-indigo-500', 'hover:bg-indigo-400', 'text-white');
+        btnSim.classList.remove('bg-white', 'text-indigo-700', 'shadow-md');
+
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+
+        setTimeout(() => {
+          redrawConnections();
+        }, 100);
+      }
+    }
+
+    // --- Show Custom Toast Notifications ---
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast-container');
+      const toastText = document.getElementById('toast-text');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastText.innerText = message;
+      
+      if (type === 'success') {
+        toastIcon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        toastIcon.className = 'text-lg text-emerald-400';
+      } else if (type === 'error') {
+        toastIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+        toastIcon.className = 'text-lg text-rose-400';
+      } else {
+        toastIcon.innerHTML = '<i class="fa-solid fa-bell"></i>';
+        toastIcon.className = 'text-lg text-amber-400';
+      }
+
+      toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-[-100px]', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 3000);
+    }
+
+    // --- Control Updates & Trigger UI Render Actions ---
+    function updateControlsUI() {
+      const ampLabelText = ampMeta[state.amplitude].text;
+      const freqLabelText = freqMeta[state.frequency].text;
+
+      // Update badges info text
+      document.getElementById('val-display-amp').innerText = ampLabelText;
+      document.getElementById('val-display-freq').innerText = freqLabelText;
+      document.getElementById('info-amp-text').innerText = "진폭 크기: " + ampLabelText;
+      document.getElementById('info-freq-text').innerText = "음높이: " + freqLabelText;
+
+      document.getElementById('amp-status-badge').innerText = ampLabelText;
+      document.getElementById('freq-status-badge').innerText = freqLabelText;
+
+      // Update character label & expressions depending on loudness
+      const speedLabel = document.getElementById('speed-indicator');
+      const characterWrap = document.getElementById('character-wrapper');
+
+      if (state.amplitude === 3) {
+        speedLabel.innerText = "💥 빵빵빵-!!! 시끄러워!";
+        speedLabel.className = "text-[10px] text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 mt-1 shadow-sm whitespace-nowrap animate-bounce";
+        characterWrap.className = "relative playing-animation w-60 h-60 bg-red-50/50 rounded-2xl border-2 border-red-200 p-4 shadow-md flex flex-col justify-between items-center overflow-hidden transition-all duration-300";
+      } else if (state.amplitude === 1) {
+        speedLabel.innerText = "💤 뾱..뾱.. 작게 소리 내는 중";
+        speedLabel.className = "text-[10px] text-slate-500 font-bold bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 mt-1 shadow-sm whitespace-nowrap";
+        characterWrap.className = "relative w-60 h-60 bg-slate-50 rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between items-center overflow-hidden transition-all duration-300";
+      } else {
+        speedLabel.innerText = "🎺 뿌우우-! 적당한 음량";
+        speedLabel.className = "text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 mt-1 shadow-sm whitespace-nowrap";
+        characterWrap.className = "relative playing-animation w-60 h-60 bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex flex-col justify-between items-center overflow-hidden transition-all duration-300";
+      }
+
+      // Update badges
+      const instrumentBadge = document.getElementById('badge-instrument');
+      const mediumBadge = document.getElementById('badge-medium');
+      const characterEmoji = document.getElementById('boy-instrument-emoji');
+      const characterLabel = document.getElementById('boy-label');
+
+      if (state.isPianoMode) {
+        instrumentBadge.innerHTML = '<i class="fa-solid fa-keyboard mr-1"></i>악기: 피아노';
+        instrumentBadge.className = 'bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs';
+        characterEmoji.innerText = '🎹👦';
+        characterLabel.innerText = '피아노 연주자';
+      } else {
+        instrumentBadge.innerHTML = '<i class="fa-solid fa-music mr-1"></i>악기: 트럼펫';
+        instrumentBadge.className = 'bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs';
+        characterEmoji.innerText = '🎺👦';
+        characterLabel.innerText = '트럼펫 소년';
+      }
+
+      if (state.isWaterMode) {
+        mediumBadge.innerHTML = '<i class="fa-solid fa-droplet mr-1"></i>매질: 물';
+        mediumBadge.className = 'bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs';
+      } else {
+        mediumBadge.innerHTML = '<i class="fa-solid fa-wind mr-1"></i>매질: 공기';
+        mediumBadge.className = 'bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs';
+      }
+
+      // Update audio parameters
+      updateAudioSynth();
+    }
+
+    // --- Action Button Click Logics ---
+    function adjustAmplitude(action) {
+      if (action === 'increase' && state.amplitude < 3) {
+        state.amplitude++;
+        showToast("진폭 상태를 높였습니다.", "info");
+      } else if (action === 'decrease' && state.amplitude > 1) {
+        state.amplitude--;
+        showToast("진폭 상태를 낮췄습니다.", "info");
+      }
+      updateControlsUI();
+    }
+
+    function adjustFrequency(action) {
+      if (action === 'increase' && state.frequency < 3) {
+        state.frequency++;
+        showToast("진동수 상태를 높였습니다.", "info");
+      } else if (action === 'decrease' && state.frequency > 1) {
+        state.frequency--;
+        showToast("진동수 상태를 낮췄습니다.", "info");
+      }
+      updateControlsUI();
+    }
+
+    function toggleWaterMode() {
+      state.isWaterMode = !state.isWaterMode;
+      
+      const btn = document.getElementById('btn-water');
+      const dot = document.getElementById('water-status-dot');
+      const overlay = document.getElementById('water-overlay');
+
+      if (state.isWaterMode) {
+        btn.classList.add('border-sky-500', 'bg-sky-50');
+        dot.className = "w-3 h-3 rounded-full bg-sky-500 animate-pulse";
+        overlay.classList.add('opacity-100');
+        showToast("매질을 '물'로 바꿨습니다. 소리와 파형을 관찰해 보세요!", "success");
+      } else {
+        btn.classList.remove('border-sky-500', 'bg-sky-50');
+        dot.className = "w-3 h-3 rounded-full bg-slate-300";
+        overlay.classList.remove('opacity-100');
+        showToast("매질을 다시 '공기'로 복원했습니다.", "info");
+      }
+      updateControlsUI();
+    }
+
+    function togglePianoMode() {
+      state.isPianoMode = !state.isPianoMode;
+
+      const btn = document.getElementById('btn-piano');
+      const dot = document.getElementById('piano-status-dot');
+
+      if (state.isPianoMode) {
+        btn.classList.add('border-amber-500', 'bg-amber-50');
+        dot.className = "w-3 h-3 rounded-full bg-amber-500 animate-pulse";
+        showToast("연주 악기가 피아노로 바뀌었습니다! 소리와 파형을 들어보세요.", "success");
+      } else {
+        btn.classList.remove('border-amber-500', 'bg-amber-50');
+        dot.className = "w-3 h-3 rounded-full bg-slate-300";
+        showToast("다시 트럼펫 연주로 복원했습니다.", "info");
+      }
+      updateControlsUI();
+    }
+
+    function resetSimulator() {
+      state = {
+        amplitude: 2,
+        frequency: 2,
+        isWaterMode: false,
+        isPianoMode: false
+      };
+
+      const wBtn = document.getElementById('btn-water');
+      const wDot = document.getElementById('water-status-dot');
+      const wOverlay = document.getElementById('water-overlay');
+
+      wBtn.classList.remove('border-sky-500', 'bg-sky-50');
+      wDot.className = "w-3 h-3 rounded-full bg-slate-300";
+      wOverlay.classList.remove('opacity-100');
+
+      const pBtn = document.getElementById('btn-piano');
+      const pDot = document.getElementById('piano-status-dot');
+
+      pBtn.classList.remove('border-amber-500', 'bg-amber-50');
+      pDot.className = "w-3 h-3 rounded-full bg-slate-300";
+
+      updateControlsUI();
+      showToast("시뮬레이터 설정이 완전히 초기화되었습니다.");
+    }
+
+
+    // --- Line Match Quiz Operations ---
+    function selectNode(side, nodeId) {
+      const nodeEl = document.getElementById(nodeId);
+
+      if (side === 'left') {
+        document.querySelectorAll('.quiz-node-left').forEach(el => {
+          el.classList.remove('border-indigo-600', 'bg-indigo-50/50');
+        });
+
+        quizState.selectedLeft = nodeId;
+        nodeEl.classList.add('border-indigo-600', 'bg-indigo-50/50');
+        document.getElementById('quiz-guide-text').innerText = "이제 매칭할 우측 파동의 요소를 선택하세요.";
+      } else {
+        if (!quizState.selectedLeft) {
+          showToast("먼저 좌측의 '소리의 특성' 요소를 선택해주세요!", "error");
+          return;
+        }
+
+        quizState.selectedRight = nodeId;
+        quizState.connections[quizState.selectedLeft] = quizState.selectedRight;
+
+        const leftNode = document.getElementById(quizState.selectedLeft);
+        leftNode.classList.remove('border-indigo-600', 'bg-indigo-50/50');
+        leftNode.classList.add('border-emerald-500', 'bg-emerald-50/20');
+        
+        nodeEl.classList.add('border-emerald-500', 'bg-emerald-50/20');
+
+        redrawConnections();
+
+        quizState.selectedLeft = null;
+        quizState.selectedRight = null;
+        
+        document.getElementById('quiz-guide-text').innerText = "매칭 완료! 다른 항목도 연결하거나 확인해보세요.";
+      }
+    }
+
+    function redrawConnections() {
+      const svg = document.getElementById('quiz-svg');
+      
+      const paths = svg.querySelectorAll('path');
+      paths.forEach(p => p.remove());
+
+      const svgRect = svg.getBoundingClientRect();
+
+      Object.keys(quizState.connections).forEach(leftId => {
+        const rightId = quizState.connections[leftId];
+
+        const leftEl = document.getElementById(leftId);
+        const rightEl = document.getElementById(rightId);
+
+        if (leftEl && rightEl) {
+          const leftRect = leftEl.getBoundingClientRect();
+          const rightRect = rightEl.getBoundingClientRect();
+
+          const x1 = leftRect.right - svgRect.left - 10;
+          const y1 = leftRect.top + (leftRect.height / 2) - svgRect.top;
+
+          const x2 = rightRect.left - svgRect.left + 10;
+          const y2 = rightRect.top + (rightRect.height / 2) - svgRect.top;
+
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const controlOffset = 40;
+          const d = `M ${x1} ${y1} C ${x1 + controlOffset} ${y1}, ${x2 - controlOffset} ${y2}, ${x2} ${y2}`;
+
+          path.setAttribute('d', d);
+          path.setAttribute('stroke', '#6366f1');
+          path.setAttribute('stroke-width', '4');
+          path.setAttribute('fill', 'none');
+          path.setAttribute('marker-end', 'url(#arrow)');
+          
+          svg.appendChild(path);
+        }
+      });
+    }
+
+    function resetQuiz() {
+      quizState = {
+        selectedLeft: null,
+        selectedRight: null,
+        connections: {}
+      };
+
+      document.querySelectorAll('.quiz-node-left, .quiz-node-right').forEach(el => {
+        el.className = el.classList.contains('quiz-node-left') 
+          ? "quiz-node-left bg-white border-2 border-slate-200 hover:border-indigo-400 px-4 py-3.5 rounded-xl shadow-sm cursor-pointer transition-all flex items-center justify-between group"
+          : "quiz-node-right bg-white border-2 border-slate-200 hover:border-indigo-400 px-4 py-3.5 rounded-xl shadow-sm cursor-pointer transition-all flex items-center justify-between group";
+      });
+
+      const svg = document.getElementById('quiz-svg');
+      svg.querySelectorAll('path').forEach(p => p.remove());
+
+      document.getElementById('cert-locked-state').classList.remove('hidden');
+      document.getElementById('cert-unlocked-state').classList.add('hidden');
+      document.getElementById('panel-certificate').className = "relative bg-white rounded-2xl p-6 shadow-md border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-center min-h-[380px] overflow-hidden transition-all duration-500";
+
+      document.getElementById('quiz-guide-text').innerText = "다시 매칭을 시작하세요! 왼쪽 노드를 누르고 우측 노드를 고르세요.";
+      showToast("퀴즈 매칭 현황을 초기화했습니다.", "info");
+    }
+
+    function checkAnswers() {
+      const keys = Object.keys(correctAnswers);
+      let score = 0;
+
+      if (Object.keys(quizState.connections).length < 3) {
+        showToast("아직 모든 항목을 연결하지 않았습니다! 완벽하게 마쳐주세요.", "error");
+        return;
+      }
+
+      keys.forEach(leftKey => {
+        if (quizState.connections[leftKey] === correctAnswers[leftKey]) {
+          score++;
+        }
+      });
+
+      if (score === 3) {
+        showToast("완벽합니다! 3개의 매칭 퀴즈를 모두 맞히셨습니다!", "success");
+        
+        document.getElementById('cert-locked-state').classList.add('hidden');
+        document.getElementById('cert-unlocked-state').classList.remove('hidden');
+        
+        const certPanel = document.getElementById('panel-certificate');
+        certPanel.className = "relative bg-amber-50/40 rounded-2xl p-6 shadow-xl border-4 border-amber-400 flex flex-col items-center justify-between text-center min-h-[380px] overflow-hidden transition-all duration-500";
+        
+        document.getElementById('panel-certificate').scrollIntoView({ behavior: 'smooth' });
+      } else {
+        showToast("틀린 매칭이 있습니다. 소리와 파형을 관찰하며 다시 연결해보세요!", "error");
+      }
+    }
+
+    // --- On Window Events & Execution starts ---
+    window.onload = function () {
+      resizeCanvas();
+      updateControlsUI();
+      drawWave(); 
+
+      window.addEventListener('resize', () => {
+        resizeCanvas();
+      });
+    };
+  </script>
+</body>
+</html>
